@@ -1,0 +1,606 @@
+[
+    {
+        "pokedex_id": 1,
+        "special": 65
+    },
+    {
+        "pokedex_id": 2,
+        "special": 80
+    },
+    {
+        "pokedex_id": 3,
+        "special": 100
+    },
+    {
+        "pokedex_id": 4,
+        "special": 50
+    },
+    {
+        "pokedex_id": 5,
+        "special": 65
+    },
+    {
+        "pokedex_id": 6,
+        "special": 85
+    },
+    {
+        "pokedex_id": 7,
+        "special": 50
+    },
+    {
+        "pokedex_id": 8,
+        "special": 65
+    },
+    {
+        "pokedex_id": 9,
+        "special": 85
+    },
+    {
+        "pokedex_id": 10,
+        "special": 20
+    },
+    {
+        "pokedex_id": 11,
+        "special": 25
+    },
+    {
+        "pokedex_id": 12,
+        "special": 80
+    },
+    {
+        "pokedex_id": 13,
+        "special": 20
+    },
+    {
+        "pokedex_id": 14,
+        "special": 25
+    },
+    {
+        "pokedex_id": 15,
+        "special": 45
+    },
+    {
+        "pokedex_id": 16,
+        "special": 35
+    },
+    {
+        "pokedex_id": 17,
+        "special": 50
+    },
+    {
+        "pokedex_id": 18,
+        "special": 70
+    },
+    {
+        "pokedex_id": 19,
+        "special": 25
+    },
+    {
+        "pokedex_id": 20,
+        "special": 50
+    },
+    {
+        "pokedex_id": 21,
+        "special": 31
+    },
+    {
+        "pokedex_id": 22,
+        "special": 61
+    },
+    {
+        "pokedex_id": 23,
+        "special": 40
+    },
+    {
+        "pokedex_id": 24,
+        "special": 65
+    },
+    {
+        "pokedex_id": 25,
+        "special": 50
+    },
+    {
+        "pokedex_id": 26,
+        "special": 90
+    },
+    {
+        "pokedex_id": 27,
+        "special": 30
+    },
+    {
+        "pokedex_id": 28,
+        "special": 55
+    },
+    {
+        "pokedex_id": 29,
+        "special": 40
+    },
+    {
+        "pokedex_id": 30,
+        "special": 55
+    },
+    {
+        "pokedex_id": 31,
+        "special": 75
+    },
+    {
+        "pokedex_id": 32,
+        "special": 40
+    },
+    {
+        "pokedex_id": 33,
+        "special": 55
+    },
+    {
+        "pokedex_id": 34,
+        "special": 75
+    },
+    {
+        "pokedex_id": 35,
+        "special": 60
+    },
+    {
+        "pokedex_id": 36,
+        "special": 85
+    },
+    {
+        "pokedex_id": 37,
+        "special": 65
+    },
+    {
+        "pokedex_id": 38,
+        "special": 100
+    },
+    {
+        "pokedex_id": 39,
+        "special": 25
+    },
+    {
+        "pokedex_id": 40,
+        "special": 50
+    },
+    {
+        "pokedex_id": 41,
+        "special": 40
+    },
+    {
+        "pokedex_id": 42,
+        "special": 75
+    },
+    {
+        "pokedex_id": 43,
+        "special": 75
+    },
+    {
+        "pokedex_id": 44,
+        "special": 85
+    },
+    {
+        "pokedex_id": 45,
+        "special": 100
+    },
+    {
+        "pokedex_id": 46,
+        "special": 55
+    },
+    {
+        "pokedex_id": 47,
+        "special": 80
+    },
+    {
+        "pokedex_id": 48,
+        "special": 40
+    },
+    {
+        "pokedex_id": 49,
+        "special": 90
+    },
+    {
+        "pokedex_id": 50,
+        "special": 45
+    },
+    {
+        "pokedex_id": 51,
+        "special": 70
+    },
+    {
+        "pokedex_id": 52,
+        "special": 40
+    },
+    {
+        "pokedex_id": 53,
+        "special": 65
+    },
+    {
+        "pokedex_id": 54,
+        "special": 50
+    },
+    {
+        "pokedex_id": 55,
+        "special": 80
+    },
+    {
+        "pokedex_id": 56,
+        "special": 35
+    },
+    {
+        "pokedex_id": 57,
+        "special": 60
+    },
+    {
+        "pokedex_id": 58,
+        "special": 50
+    },
+    {
+        "pokedex_id": 59,
+        "special": 80
+    },
+    {
+        "pokedex_id": 60,
+        "special": 40
+    },
+    {
+        "pokedex_id": 61,
+        "special": 50
+    },
+    {
+        "pokedex_id": 62,
+        "special": 70
+    },
+    {
+        "pokedex_id": 63,
+        "special": 105
+    },
+    {
+        "pokedex_id": 64,
+        "special": 120
+    },
+    {
+        "pokedex_id": 65,
+        "special": 135
+    },
+    {
+        "pokedex_id": 66,
+        "special": 35
+    },
+    {
+        "pokedex_id": 67,
+        "special": 50
+    },
+    {
+        "pokedex_id": 68,
+        "special": 65
+    },
+    {
+        "pokedex_id": 69,
+        "special": 70
+    },
+    {
+        "pokedex_id": 70,
+        "special": 85
+    },
+    {
+        "pokedex_id": 71,
+        "special": 100
+    },
+    {
+        "pokedex_id": 72,
+        "special": 100
+    },
+    {
+        "pokedex_id": 73,
+        "special": 120
+    },
+    {
+        "pokedex_id": 74,
+        "special": 30
+    },
+    {
+        "pokedex_id": 75,
+        "special": 45
+    },
+    {
+        "pokedex_id": 76,
+        "special": 55
+    },
+    {
+        "pokedex_id": 77,
+        "special": 65
+    },
+    {
+        "pokedex_id": 78,
+        "special": 80
+    },
+    {
+        "pokedex_id": 79,
+        "special": 40
+    },
+    {
+        "pokedex_id": 80,
+        "special": 80
+    },
+    {
+        "pokedex_id": 81,
+        "special": 95
+    },
+    {
+        "pokedex_id": 82,
+        "special": 120
+    },
+    {
+        "pokedex_id": 83,
+        "special": 58
+    },
+    {
+        "pokedex_id": 84,
+        "special": 35
+    },
+    {
+        "pokedex_id": 85,
+        "special": 60
+    },
+    {
+        "pokedex_id": 86,
+        "special": 70
+    },
+    {
+        "pokedex_id": 87,
+        "special": 95
+    },
+    {
+        "pokedex_id": 88,
+        "special": 40
+    },
+    {
+        "pokedex_id": 89,
+        "special": 65
+    },
+    {
+        "pokedex_id": 90,
+        "special": 45
+    },
+    {
+        "pokedex_id": 91,
+        "special": 85
+    },
+    {
+        "pokedex_id": 92,
+        "special": 100
+    },
+    {
+        "pokedex_id": 93,
+        "special": 115
+    },
+    {
+        "pokedex_id": 94,
+        "special": 130
+    },
+    {
+        "pokedex_id": 95,
+        "special": 30
+    },
+    {
+        "pokedex_id": 96,
+        "special": 90
+    },
+    {
+        "pokedex_id": 97,
+        "special": 115
+    },
+    {
+        "pokedex_id": 98,
+        "special": 25
+    },
+    {
+        "pokedex_id": 99,
+        "special": 50
+    },
+    {
+        "pokedex_id": 100,
+        "special": 55
+    },
+    {
+        "pokedex_id": 101,
+        "special": 80
+    },
+    {
+        "pokedex_id": 102,
+        "special": 60
+    },
+    {
+        "pokedex_id": 103,
+        "special": 125
+    },
+    {
+        "pokedex_id": 104,
+        "special": 40
+    },
+    {
+        "pokedex_id": 105,
+        "special": 50
+    },
+    {
+        "pokedex_id": 106,
+        "special": 35
+    },
+    {
+        "pokedex_id": 107,
+        "special": 35
+    },
+    {
+        "pokedex_id": 108,
+        "special": 60
+    },
+    {
+        "pokedex_id": 109,
+        "special": 60
+    },
+    {
+        "pokedex_id": 110,
+        "special": 85
+    },
+    {
+        "pokedex_id": 111,
+        "special": 30
+    },
+    {
+        "pokedex_id": 112,
+        "special": 45
+    },
+    {
+        "pokedex_id": 113,
+        "special": 105
+    },
+    {
+        "pokedex_id": 114,
+        "special": 100
+    },
+    {
+        "pokedex_id": 115,
+        "special": 40
+    },
+    {
+        "pokedex_id": 116,
+        "special": 70
+    },
+    {
+        "pokedex_id": 117,
+        "special": 95
+    },
+    {
+        "pokedex_id": 118,
+        "special": 50
+    },
+    {
+        "pokedex_id": 119,
+        "special": 80
+    },
+    {
+        "pokedex_id": 120,
+        "special": 70
+    },
+    {
+        "pokedex_id": 121,
+        "special": 100
+    },
+    {
+        "pokedex_id": 122,
+        "special": 100
+    },
+    {
+        "pokedex_id": 123,
+        "special": 55
+    },
+    {
+        "pokedex_id": 124,
+        "special": 95
+    },
+    {
+        "pokedex_id": 125,
+        "special": 85
+    },
+    {
+        "pokedex_id": 126,
+        "special": 85
+    },
+    {
+        "pokedex_id": 127,
+        "special": 55
+    },
+    {
+        "pokedex_id": 128,
+        "special": 70
+    },
+    {
+        "pokedex_id": 129,
+        "special": 20
+    },
+    {
+        "pokedex_id": 130,
+        "special": 100
+    },
+    {
+        "pokedex_id": 131,
+        "special": 95
+    },
+    {
+        "pokedex_id": 132,
+        "special": 48
+    },
+    {
+        "pokedex_id": 133,
+        "special": 65
+    },
+    {
+        "pokedex_id": 134,
+        "special": 110
+    },
+    {
+        "pokedex_id": 135,
+        "special": 110
+    },
+    {
+        "pokedex_id": 136,
+        "special": 110
+    },
+    {
+        "pokedex_id": 137,
+        "special": 75
+    },
+    {
+        "pokedex_id": 138,
+        "special": 90
+    },
+    {
+        "pokedex_id": 139,
+        "special": 115
+    },
+    {
+        "pokedex_id": 140,
+        "special": 45
+    },
+    {
+        "pokedex_id": 141,
+        "special": 70
+    },
+    {
+        "pokedex_id": 142,
+        "special": 60
+    },
+    {
+        "pokedex_id": 143,
+        "special": 65
+    },
+    {
+        "pokedex_id": 144,
+        "special": 125
+    },
+    {
+        "pokedex_id": 145,
+        "special": 125
+    },
+    {
+        "pokedex_id": 146,
+        "special": 125
+    },
+    {
+        "pokedex_id": 147,
+        "special": 50
+    },
+    {
+        "pokedex_id": 148,
+        "special": 70
+    },
+    {
+        "pokedex_id": 149,
+        "special": 100
+    },
+    {
+        "pokedex_id": 150,
+        "special": 154
+    },
+    {
+        "pokedex_id": 151,
+        "special": 100
+    }
+]

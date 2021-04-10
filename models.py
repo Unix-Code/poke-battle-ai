@@ -1,6 +1,6 @@
 import json
 import random
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import Optional, TYPE_CHECKING
 
@@ -49,17 +49,17 @@ class Type(Enum):
 
 
 @dataclass(frozen=True)
-class HitCountInfo:
+class HitInfo:
     min_hits: int
     max_hits: int
+    has_invulnerable_phase: bool = False
+    requires_charge: bool = False
+    has_recharge: bool = False
+    self_destructing: bool = False
 
     @property
     def definite_hit_count(self) -> Optional[int]:
         return self.min_hits if self.min_hits == self.max_hits else None
-
-    @classmethod
-    def as_standard(cls):
-        return cls(min_hits=1, max_hits=1)
 
     def num_hits(self) -> int:
         if self.definite_hit_count is not None:
@@ -88,7 +88,7 @@ class MoveInfo:
 
     high_crit_ratio: bool
 
-    hit_count_info: HitCountInfo
+    hit_info: HitInfo
 
     # Null accuracy means this move doesn't factor in accuracy checks
     accuracy: Optional[float]
@@ -107,7 +107,7 @@ class Move:
     def struggle(cls) -> 'Move':
         move_info = MoveInfo(api_id=165, name='struggle',
                              type=Type.NORMAL, power=50, total_pp=10, damage_class=DamageClass.PHYSICAL, healing=0,
-                             drain=-0.5, high_crit_ratio=False, hit_count_info=HitCountInfo(min_hits=1, max_hits=1),
+                             drain=-0.5, high_crit_ratio=False, hit_info=HitInfo(min_hits=1, max_hits=1),
                              accuracy=1.0, priority=0)
         return Move(move_info, pp=move_info.total_pp)  # This pp will never decrement
 
@@ -153,6 +153,13 @@ class PokemonSpecies:
         return self.name.replace("-", " ").capitalize()
 
 
+class PokemonStatus(Enum):
+    CHARGING = 0  # (ie Solarbeam or Razor Wind)
+    RECHARGING = 1  # (ie after Hyper Beam)
+    INVULNERABLE = 2  # (ie first turn of Fly or Dig)
+    # TODO: Add Burned, Poisoned, Frozen, Asleep, Confused, etc
+
+
 @dataclass
 class Pokemon:
     species: PokemonSpecies
@@ -163,12 +170,17 @@ class Pokemon:
     nickname: str
     level: int = 100
 
+    statuses: set[PokemonStatus] = field(default_factory=set)
+
     @property
     def fainted(self) -> bool:
         return self.hp == 0
 
     def apply_health_effect(self, health_delta: int):
         self.hp = min(max(self.hp + health_delta, 0), self.stats.total_hp)
+
+    def has_status(self, status: PokemonStatus) -> bool:
+        return status in self.statuses
 
 
 @dataclass(frozen=True)

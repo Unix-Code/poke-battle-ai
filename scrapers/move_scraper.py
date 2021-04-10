@@ -4,7 +4,7 @@ from typing import Optional
 
 import requests
 
-from models import DamageClass, HitCountInfo, Type, MoveInfo
+from models import DamageClass, HitInfo, Type, MoveInfo
 
 logger = logging.getLogger(__name__)
 
@@ -13,19 +13,18 @@ class MoveScraper:
     def __init__(self):
         """
         ~~~ Blacklist ~~~
-        Charging Moves: Skull Bash, Razor Wind, Sky Attack, Solar Beam, Bide, Counter
-        Moves with a recharge turn: Hyper Beam
-        Invulnerable Turn Moves: Fly, Dig
+        Counter Moves: Bide, Counter
         Multi-turn Effect Moves: Bind, Leech Seed
         Moves that hit for many turns: Rage, Thrash, Petal Dance
         No status-conditional moves: Dream Eater
-        Not valid since these are 1v1 battles: Self Destruct
         Already manually defined: Struggle
         """
-        self.blacklist: set[str] = {"skull-bash", "razor-wind",  "sky-attack", "solar-beam",
-                                    "bide", "counter", "hyper-beam", "fly", "dig", "bind",
-                                    "leech-seed", "rage", "thrash", "petal-dance", "dream-eater",
-                                    "self-destruct", "struggle"}
+        self.self_destructing_moves: set[str] = {"self-destruct", "explosion"}
+        self.moves_with_recharge: set[str] = {"hyper-beam"}
+        self.moves_that_charge: set[str] = {"skull-bash", "razor-wind",  "sky-attack", "solar-beam", "fly", "dig"}
+        self.moves_with_invulnerable_phase: set[str] = {"fly", "dig"}
+        self.blacklist: set[str] = {"bide", "counter", "bind", "leech-seed", "rage", "thrash",
+                                    "petal-dance", "dream-eater", "struggle"}
         self.high_crit_ratio_moves: set[str] = {"crabhammer", "karate-chop", "razor-leaf", "slash"}
 
     def _scrape_move(self, move_url: str) -> Optional[MoveInfo]:
@@ -51,10 +50,13 @@ class MoveScraper:
             return None
 
         try:
-            min_hits = move_data["meta"]["min_hits"]
-            max_hits = move_data["meta"]["max_hits"]
-            hit_count_info = HitCountInfo.as_standard() if min_hits is None and max_hits is None \
-                else HitCountInfo(min_hits=min_hits, max_hits=max_hits)
+            min_hits = move_data["meta"]["min_hits"] or 1
+            max_hits = move_data["meta"]["max_hits"] or 1
+            hit_count_info = HitInfo(min_hits=min_hits, max_hits=max_hits,
+                                     has_invulnerable_phase=(move_data["name"] in self.moves_with_invulnerable_phase),
+                                     requires_charge=(move_data["name"] in self.moves_that_charge),
+                                     has_recharge=(move_data["name"] in self.moves_with_recharge),
+                                     self_destructing=(move_data["name"] in self.self_destructing_moves))
 
             return MoveInfo(
                 api_id=move_data["id"],
@@ -67,7 +69,7 @@ class MoveScraper:
                 high_crit_ratio=(move_data["name"] in self.high_crit_ratio_moves),
                 healing=(move_data["meta"]["healing"] / 100),
                 drain=(move_data["meta"]["drain"] / 100),
-                hit_count_info=hit_count_info,
+                hit_info=hit_count_info,
                 accuracy=(move_data["accuracy"] / 100 if move_data["accuracy"] else None)
             )
         except ValueError as e:

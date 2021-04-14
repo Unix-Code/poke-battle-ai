@@ -2,7 +2,17 @@ import math
 import random
 from typing import Optional
 
-from models import Pokemon, Move, DamageClass, Type, MoveInfo, PokemonSpecies, Trainer, PokemonStatus
+from models import (
+    Pokemon, Move, DamageClass, Type, MoveInfo, PokemonSpecies, Trainer, PokemonStatus, Ailment
+)
+
+NON_VOLATILE_AILMENTS = {Ailment.BURN, Ailment.PARALYSIS, Ailment.POISON}
+NON_VOLATILE_STATUSES = {
+    PokemonStatus.BURNED,
+    PokemonStatus.PARALYZED,
+    PokemonStatus.POISONED,
+    PokemonStatus.BADLY_POISONED
+}
 
 
 class Battle:
@@ -19,6 +29,9 @@ class Battle:
         return move.info.priority, poke_speed, random.randint(0, 1000)  # random move order if all other things equal
 
     def is_crit(self, attacking_pokemon: PokemonSpecies, move_used: MoveInfo) -> bool:
+        if move_used.name == "attack_self":
+            return False
+
         threshold = (attacking_pokemon.base_stats.speed / 2)
         if move_used.high_crit_ratio:
             threshold *= 8
@@ -44,6 +57,9 @@ class Battle:
     def _calc_modifier(self, attacking_pokemon: PokemonSpecies, defending_pokemon: PokemonSpecies,
                        move_used: MoveInfo) -> float:
         rand_modifier = random.uniform(0.85, 1.0)
+        if move_used.name == "attack_self":
+            return rand_modifier
+
         stab = 1.5 if move_used.type in attacking_pokemon.types else 1
         type_modifier = Type.dmg_modifier(move_used.type, defending_pokemon.types[0])
         if len(defending_pokemon.types) > 1:
@@ -90,8 +106,89 @@ class Battle:
 
         return False
 
+    def apply_ailment(self, move_used: Move, defending_pokemon: Pokemon):
+        ailment = move_used.info.ailment
+        if defending_pokemon.statuses & NON_VOLATILE_STATUSES and ailment in NON_VOLATILE_AILMENTS:
+            # A Pokémon cannot gain a non-volatile status if it's already afflicted by another one.
+            return
+
+        if ailment == Ailment.UNKNOWN:
+            # Tri Attack was used
+            ailment = Ailment.get_tri_attack_ailment()
+            if ailment == Ailment.UNKNOWN:
+                # Freeze was the randomly chosen ailment and we don't support that, so return
+                return
+        if ailment == Ailment.BURN:
+            # Fire-type Pokemon cannot be burned by a Fire-type move
+            if Type.FIRE not in defending_pokemon.species.types or move_used.info.type != Type.FIRE:
+                print(f"{defending_pokemon.nickname} is burned by the attack!")
+                defending_pokemon.statuses.add(PokemonStatus.BURNED)
+                # TODO: Halve its Attack
+        elif ailment == Ailment.PARALYSIS:
+            # Ground-type Pokemon cannot be paralyzed by an Electric-type move
+            if (
+                Type.GROUND not in defending_pokemon.species.types
+                or move_used.info.type != Type.ELECTRIC
+            ):
+                print(f"{defending_pokemon.nickname} is paralyzed by the attack!")
+                defending_pokemon.statuses.add(PokemonStatus.PARALYZED)
+                # TODO: Decrease Speed by 75%
+        elif ailment == Ailment.POISON:
+            # Poison-type Pokemon cannot be poisoned
+            if Type.POISON not in defending_pokemon.species.types:
+                if move_used.info.api_id == 92:
+                    # The "Toxic" move was used
+                    print(f"{defending_pokemon.nickname} is badly poisoned by the attack!")
+                    defending_pokemon.statuses.add(PokemonStatus.BADLY_POISONED)
+                else:
+                    print(f"{defending_pokemon.nickname} is poisoned by the attack!")
+                    defending_pokemon.statuses.add(PokemonStatus.POISONED)
+        elif ailment == Ailment.CONFUSION:
+            print(f"{defending_pokemon.nickname} is confused by the attack!")
+            defending_pokemon.statuses.add(PokemonStatus.CONFUSED)
+            defending_pokemon.confusion_turns = random.randint(1, 5)
+        # Pokemon can only be bound by one binding move at a time
+        elif ailment == Ailment.TRAP and PokemonStatus.BOUND not in defending_pokemon.statuses:
+            print(f"{defending_pokemon.nickname} is trapped by the attack!")
+            defending_pokemon.statuses.add(PokemonStatus.BOUND)
+            rand_val = random.random()
+            if rand_val < 0.375:
+                defending_pokemon.bound_turns = 2
+            elif rand_val < 0.75:
+                defending_pokemon.bound_turns = 3
+            elif rand_val < 0.875:
+                defending_pokemon.bound_turns = 4
+            else:
+                defending_pokemon.bound_turns = 5
+
     def use_move(self, attacking_pokemon: Pokemon, defending_pokemon: Pokemon,
                  move_to_use: Move, trainer_ind: int):
+
+        if attacking_pokemon.has_status(PokemonStatus.PARALYZED) and random.random() < 0.25:
+            print(f"{attacking_pokemon.nickname} is fully paralyzed! It can't move!")
+            return
+
+        if attacking_pokemon.has_status(PokemonStatus.CONFUSED):
+            attacking_pokemon.confusion_turns -= 1
+            if attacking_pokemon.confusion_turns == 0:
+                print(f"{attacking_pokemon.nickname} snapped out of its confusion!")
+                attacking_pokemon.statuses.remove(PokemonStatus.CONFUSED)
+            elif random.random() < 0.5:
+                # The Pokemon will attack itself
+                # These variables are changed so the damage can still be calculated the same way
+                move_to_use = Move.attack_self()
+                defending_pokemon = attacking_pokemon
+
+        if attacking_pokemon.has_status(PokemonStatus.BOUND):
+            if attacking_pokemon.confusion_turns == 0:
+                print(f"{attacking_pokemon.nickname} broke free! It is no longer trapped!")
+                attacking_pokemon.statuses.remove(PokemonStatus.BOUND)
+            else:
+                print(f"{attacking_pokemon.nickname} is trapped! It can't move!")
+                attacking_pokemon.apply_health_effect(-attacking_pokemon.get_status_damage())
+                attacking_pokemon.bound_turns -= 1
+                return
+
         # Decrements pp or end up struggling
         move_used = move_to_use.use()
 
@@ -112,12 +209,28 @@ class Battle:
         total_dmg_dealt = sum(hit_damages) // self.LENGTH_MODIFIER
 
         attacker_health_delta = math.floor(move_used.info.drain * total_dmg_dealt)
+        recoil = attacker_health_delta < 0
+        # Apply damage from status ailments
+        attacker_health_delta -= attacking_pokemon.get_status_damage(
+            total_dmg_dealt > defending_pokemon.hp
+        )
+
+        if move_used.info.name == "attack_self":
+            print(f"{attacking_pokemon.nickname} is confused! It hurt itself in its confusion!")
+            attacking_pokemon.apply_health_effect(attacker_health_delta)
+            return
 
         print(f"{attacking_pokemon.nickname} dealt {total_dmg_dealt} damage{' in total' if len(hit_damages) > 1 else ''}.")
-        if attacker_health_delta != 0:
-            attacker_action_text = f"healed itself for {attacker_health_delta}" \
-                if attacker_health_delta > 0 else f"was hit with {attacker_health_delta} recoil damage"
-            print(f"{attacking_pokemon.nickname} {attacker_action_text}")
+        if attacker_health_delta > 0:
+            print(f"{attacking_pokemon.nickname} healed itself for {attacker_health_delta}")
+        elif attacker_health_delta < 0 and recoil:
+            print(f"{attacking_pokemon.nickname} was hit with {attacker_health_delta} recoil damage")
+
+        if move_used.info.ailment:
+            ailment_chance = move_used.info.ailment_chance
+            # Moves that always apply an ailment have an `ailment_chance` of 0 for some reason
+            if ailment_chance == 0 or random.random() < ailment_chance:
+                self.apply_ailment(move_used, defending_pokemon)
 
         defender_health_delta = -total_dmg_dealt
         # Adjust health bars after using move

@@ -4,7 +4,7 @@ from typing import Optional
 
 import requests
 
-from models import DamageClass, HitInfo, Type, MoveInfo
+from models import DamageClass, HitInfo, Type, MoveInfo, StatChangeEffect, StatType
 
 logger = logging.getLogger(__name__)
 
@@ -32,20 +32,21 @@ class MoveScraper:
         if move_data["name"] in self.blacklist:
             return None
 
-        # TODO: Support status moves?
-        if move_data["damage_class"]["name"].upper() not in [x.value for x in DamageClass]:
-            logger.info(f"IGNORED STATUS MOVE: {move_data['name']} | {move_data['id']}")
+        # TODO: Support non-stat-changing status moves (ie burn, sleep, frozen, etc)?
+        damage_class = DamageClass(move_data["damage_class"]["name"].upper())
+        if damage_class is DamageClass.STATUS and len(move_data["stat_changes"]) == 0:
+            logger.info(f"IGNORED STATUS MOVE (NOT STAT-CHANGING): {move_data['name']} | {move_data['id']}")
             return None
 
         if move_data["past_values"]:
-            if len(move_data["past_values"]) == 0:
+            if len(move_data["past_values"]) > 1:
                 logger.warning(f"MULTIPLE PAST VALUES DETECTED: {move_data['name']} | {move_data['id']}")
 
             # Use past values instead
             move_data.update({k: v for k, v in move_data["past_values"][0].items()
                               if k in ["accuracy", "power", "type", "pp"] and v is not None})
 
-        if move_data["power"] is None:
+        if damage_class is not DamageClass.STATUS and move_data["power"] is None:
             logger.info(f"IGNORED NON-STANDARD DAMAGING MOVE: {move_data['name']} | {move_data['id']}")
             return None
 
@@ -58,19 +59,38 @@ class MoveScraper:
                                      has_recharge=(move_data["name"] in self.moves_with_recharge),
                                      self_destructing=(move_data["name"] in self.self_destructing_moves))
 
+            stat_change_effect = None
+            if len(move_data["stat_changes"]) > 0:
+                if len(move_data["stat_changes"]) > 1:
+                    logger.info(f"MULTIPLE STAT CHANGES DETECTED: {move_data['name']} | {move_data['id']}")
+                # Use the last value here since Growth has 2 but only the last one is for Gen 1
+                stat_change = move_data["stat_changes"].pop()
+
+                # This truncates "special-attack" and "special-defense" to "special" (for Gen 1)
+                raw_stat_type = stat_change["stat"]["name"].split("-")[0]
+
+                # For some reason stat_chance is either 0 or 100 for sure-fire moves
+                # (it should be guaranteed if move hits in most cases)
+                stat_chance = 1 if move_data["meta"]["stat_chance"] == 0 else move_data["meta"]["stat_chance"] / 100
+                stat_change_effect = StatChangeEffect(self_targeting=(move_data["target"]["name"] == "user"),
+                                                      change=stat_change["change"],
+                                                      stat_type=StatType(raw_stat_type),
+                                                      chance=stat_chance)
+
             return MoveInfo(
                 api_id=move_data["id"],
                 name=move_data["name"],
                 type=Type(move_data["type"]["name"].upper()),
                 power=move_data["power"],
                 total_pp=move_data["pp"],
-                damage_class=DamageClass(move_data["damage_class"]["name"].upper()),
+                damage_class=damage_class,
                 priority=move_data["priority"],
                 high_crit_ratio=(move_data["name"] in self.high_crit_ratio_moves),
                 healing=(move_data["meta"]["healing"] / 100),
                 drain=(move_data["meta"]["drain"] / 100),
                 hit_info=hit_count_info,
-                accuracy=(move_data["accuracy"] / 100 if move_data["accuracy"] else None)
+                accuracy=(move_data["accuracy"] / 100 if move_data["accuracy"] else None),
+                stat_change_effect=stat_change_effect
             )
         except ValueError as e:
             raise e

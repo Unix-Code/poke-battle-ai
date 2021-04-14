@@ -11,6 +11,7 @@ if TYPE_CHECKING:
 class DamageClass(Enum):
     PHYSICAL = "PHYSICAL"
     SPECIAL = "SPECIAL"
+    STATUS = "STATUS"
 
 
 class Type(Enum):
@@ -70,6 +71,23 @@ class HitInfo:
         return num_hits[0]
 
 
+class StatType(Enum):
+    ATTACK = "attack"
+    DEFENSE = "defense"
+    SPECIAL = "special"
+    SPEED = "speed"
+    ACCURACY = "accuracy"
+    EVASION = "evasion"
+
+
+@dataclass(frozen=True)
+class StatChangeEffect:
+    self_targeting: bool  # Does this stat change effect the user or the opponent?
+    change: int  # Positive or Negative change in stages
+    stat_type: StatType
+    chance: float
+
+
 @dataclass(frozen=True)
 class MoveInfo:
     # ID for pokeapi.co
@@ -91,7 +109,9 @@ class MoveInfo:
     hit_info: HitInfo
 
     # Null accuracy means this move doesn't factor in accuracy checks
-    accuracy: Optional[float]
+    accuracy: Optional[float] = None
+
+    stat_change_effect: Optional[StatChangeEffect] = None  # FIXME: Placeholder Placement
 
     @property
     def display_name(self) -> str:

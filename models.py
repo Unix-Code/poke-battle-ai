@@ -23,21 +23,13 @@ class Ailment(Enum):
     # For Tri Attack
     UNKNOWN = "UNKNOWN"
 
-    @classmethod
-    def get_tri_attack_ailment(cls) -> 'Ailment':
-        """
-        Tri Attack has an equal chance of causing paralyzing, burning, and freezing the opponent.
-        So to help with that, this function randomly returns one of those ailments (except freeze
-        because we don't support it).
-        """
-        rand_val = random.random()
-        if rand_val < 1/3:
-            return Ailment.PARALYSIS
-        if rand_val < 2/3:
-            return Ailment.BURN
-        else:
-            # Because we don't support freezing
-            return Ailment.UNKNOWN
+    @property
+    def non_volatile(self):
+        return self in {
+            Ailment.BURN,
+            Ailment.PARALYSIS,
+            Ailment.POISON
+        }
 
 
 class Type(Enum):
@@ -203,6 +195,15 @@ class PokemonStatus(Enum):
     POISONED = 6
     CONFUSED = 7
     BADLY_POISONED = 8
+
+    @property
+    def non_volatile(self):
+        return self in {
+            PokemonStatus.BURNED,
+            PokemonStatus.PARALYZED,
+            PokemonStatus.POISONED,
+            PokemonStatus.BADLY_POISONED
+        }
 
 
 @dataclass

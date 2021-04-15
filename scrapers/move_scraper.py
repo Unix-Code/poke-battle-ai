@@ -60,6 +60,9 @@ class MoveScraper:
                                      has_recharge=(move_data["name"] in self.moves_with_recharge),
                                      self_destructing=(move_data["name"] in self.self_destructing_moves))
             ailment = move_data["meta"]["ailment"]["name"]
+            ailment_chance = move_data["meta"]["ailment_chance"] / 100
+            if ailment not in self.ailment_blacklist and ailment_chance == 0:
+                ailment_chance = 1
 
             return MoveInfo(
                 api_id=move_data["id"],
@@ -75,7 +78,7 @@ class MoveScraper:
                 hit_info=hit_count_info,
                 accuracy=(move_data["accuracy"] / 100 if move_data["accuracy"] else None),
                 ailment=Ailment(ailment.upper()) if ailment not in self.ailment_blacklist else None,
-                ailment_chance=move_data["meta"]["ailment_chance"] / 100,
+                ailment_chance=ailment_chance,
             )
         except ValueError as e:
             raise e

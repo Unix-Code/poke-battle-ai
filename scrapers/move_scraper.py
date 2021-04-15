@@ -4,7 +4,7 @@ from typing import Optional
 
 import requests
 
-from models import DamageClass, HitInfo, Type, MoveInfo
+from models import DamageClass, HitInfo, Type, MoveInfo, Ailment
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +26,8 @@ class MoveScraper:
         self.blacklist: set[str] = {"bide", "counter", "bind", "leech-seed", "rage", "thrash",
                                     "petal-dance", "dream-eater", "struggle"}
         self.high_crit_ratio_moves: set[str] = {"crabhammer", "karate-chop", "razor-leaf", "slash"}
+        # Ignored ailments
+        self.ailment_blacklist: set[str] = {"freeze", "none"}
 
     def _scrape_move(self, move_url: str) -> Optional[MoveInfo]:
         move_data = requests.get(move_url).json()
@@ -57,6 +59,10 @@ class MoveScraper:
                                      requires_charge=(move_data["name"] in self.moves_that_charge),
                                      has_recharge=(move_data["name"] in self.moves_with_recharge),
                                      self_destructing=(move_data["name"] in self.self_destructing_moves))
+            ailment = move_data["meta"]["ailment"]["name"]
+            ailment_chance = move_data["meta"]["ailment_chance"] / 100
+            if ailment not in self.ailment_blacklist and ailment_chance == 0:
+                ailment_chance = 1
 
             return MoveInfo(
                 api_id=move_data["id"],
@@ -70,7 +76,9 @@ class MoveScraper:
                 healing=(move_data["meta"]["healing"] / 100),
                 drain=(move_data["meta"]["drain"] / 100),
                 hit_info=hit_count_info,
-                accuracy=(move_data["accuracy"] / 100 if move_data["accuracy"] else None)
+                accuracy=(move_data["accuracy"] / 100 if move_data["accuracy"] else None),
+                ailment=Ailment(ailment.upper()) if ailment not in self.ailment_blacklist else None,
+                ailment_chance=ailment_chance,
             )
         except ValueError as e:
             raise e

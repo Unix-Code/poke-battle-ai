@@ -1,4 +1,5 @@
 import json
+import math
 import random
 from dataclasses import dataclass, field
 from enum import Enum
@@ -11,6 +12,24 @@ if TYPE_CHECKING:
 class DamageClass(Enum):
     PHYSICAL = "PHYSICAL"
     SPECIAL = "SPECIAL"
+
+
+class Ailment(Enum):
+    BURN = "BURN"
+    PARALYSIS = "PARALYSIS"
+    TRAP = "TRAP"
+    POISON = "POISON"
+    CONFUSION = "CONFUSION"
+    # For Tri Attack
+    UNKNOWN = "UNKNOWN"
+
+    @property
+    def non_volatile(self):
+        return self in {
+            Ailment.BURN,
+            Ailment.PARALYSIS,
+            Ailment.POISON
+        }
 
 
 class Type(Enum):
@@ -93,6 +112,9 @@ class MoveInfo:
     # Null accuracy means this move doesn't factor in accuracy checks
     accuracy: Optional[float]
 
+    ailment: Optional[Ailment] = None
+    ailment_chance: float = 0
+
     @property
     def display_name(self) -> str:
         return self.name.replace("-", " ").capitalize()
@@ -110,6 +132,16 @@ class Move:
                              drain=-0.5, high_crit_ratio=False, hit_info=HitInfo(min_hits=1, max_hits=1),
                              accuracy=1.0, priority=0)
         return Move(move_info, pp=move_info.total_pp)  # This pp will never decrement
+
+    @classmethod
+    def attack_self(cls) -> 'Move':
+        """For when a Pokemon is confused."""
+        move_info = MoveInfo(
+            api_id=-1, name='attack_self', type=Type.NORMAL, power=40, total_pp=10,
+            damage_class=DamageClass.PHYSICAL, healing=0, drain=0, high_crit_ratio=False,
+            hit_info=HitInfo(min_hits=1, max_hits=1), accuracy=None, priority=0
+        )
+        return Move(move_info, pp=move_info.total_pp)
 
     def use(self) -> 'Move':
         if self.pp == 0:
@@ -157,7 +189,21 @@ class PokemonStatus(Enum):
     CHARGING = 0  # (ie Solarbeam or Razor Wind)
     RECHARGING = 1  # (ie after Hyper Beam)
     INVULNERABLE = 2  # (ie first turn of Fly or Dig)
-    # TODO: Add Burned, Poisoned, Frozen, Asleep, Confused, etc
+    BURNED = 3
+    PARALYZED = 4
+    BOUND = 5
+    POISONED = 6
+    CONFUSED = 7
+    BADLY_POISONED = 8
+
+    @property
+    def non_volatile(self):
+        return self in {
+            PokemonStatus.BURNED,
+            PokemonStatus.PARALYZED,
+            PokemonStatus.POISONED,
+            PokemonStatus.BADLY_POISONED
+        }
 
 
 @dataclass
@@ -169,6 +215,12 @@ class Pokemon:
     move_set: tuple[Move, Move, Move, Move]
     nickname: str
     level: int = 100
+    # Damage multiplier that increments every turn a Pokemon is badly poisoned
+    dmg_multiplier: int = 1
+    # The number of turns left in the Pokemon's confusion status
+    confusion_turns: int = 0
+    # The number of turns left in the Pokemon's bound status
+    bound_turns: int = 0
 
     statuses: set[PokemonStatus] = field(default_factory=set)
 
@@ -181,6 +233,29 @@ class Pokemon:
 
     def has_status(self, status: PokemonStatus) -> bool:
         return status in self.statuses
+
+    def get_status_damage(self, opponent_fainted: bool = False):
+        if self.has_status(PokemonStatus.BURNED):
+            print(f"{self.nickname} is hurt by its burn!")
+            return math.floor(self.stats.total_hp / 16)
+        if self.has_status(PokemonStatus.POISONED) and not opponent_fainted:
+            print(f"{self.nickname} is hurt by poison!")
+            return math.floor(self.stats.total_hp / 16)
+        if self.has_status(PokemonStatus.BADLY_POISONED):
+            print(f"{self.nickname} is hurt by poison!")
+            if self.dmg_multiplier == 1:
+                dmg = max(math.floor(self.stats.total_hp / 16), 1)
+                self.dmg_multiplier += 1
+                return dmg
+            else:
+                dmg = self.dmg_multiplier * math.floor(self.stats.total_hp / 16)
+                if self.dmg_multiplier < 15:
+                    self.dmg_multiplier += 1
+                    return dmg
+        if self.has_status(PokemonStatus.BOUND):
+            print(f"{self.nickname} is hurt by being bound!")
+            return math.floor(self.stats.total_hp / 16)
+        return 0
 
 
 @dataclass(frozen=True)

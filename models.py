@@ -273,5 +273,5 @@ class Trainer:
         for move in self.pokemon.move_set:
             move.pp = move.info.total_pp
 
-    def pick_move(self, opposing_pokemon: Pokemon) -> Move:
-        return self.battle_strategy.pick_move(self.pokemon, opposing_pokemon)
+    def pick_move(self, opposing_pokemon: Pokemon, trainer_ind: int) -> Move:
+        return self.battle_strategy.pick_move(self.pokemon, opposing_pokemon, trainer_ind)

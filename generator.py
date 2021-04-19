@@ -1,7 +1,16 @@
 import dataclasses
+import itertools
+import math
 import random
+from enum import Enum
 
-from models import PokemonStats, PokemonSpecies, Pokemon, Move
+from models import PokemonStats, PokemonSpecies, Pokemon, Move, Type
+
+
+class Matchup(Enum):
+    DISADVANTAGEOUS = -1
+    NEUTRAL = 0
+    ADVANTAGEOUS = 1
 
 
 class PokemonGenerator:
@@ -35,7 +44,36 @@ class PokemonGenerator:
         return Pokemon(poke_species, hp=full_stats.total_hp,
                        stats=full_stats, move_set=move_set, nickname=nickname)
 
-    def generate(self, n: int = 1) -> list[Pokemon]:
-        pokemon_species = random.choices(self.all_pokemon, k=n)
+    def _types_advantage(self, pokemon_a: PokemonSpecies, pokemon_b: PokemonSpecies) -> Matchup:
+        weight = math.prod(Type.dmg_modifier(at, dt) for at, dt in itertools.product(pokemon_a.types, pokemon_b.types))
+        if weight > 1:
+            return Matchup.ADVANTAGEOUS
+        elif weight < 1:
+            return Matchup.DISADVANTAGEOUS
+        else:
+            return Matchup.NEUTRAL
+
+    def generate(self, n: int = 1, matchup: Matchup = Matchup.NEUTRAL) -> list[Pokemon]:
+        pokemon_species = []
+        if matchup is Matchup.NEUTRAL or n != 2:
+            pokemon_species = random.choices(self.all_pokemon, k=n)
+        # Add support for generating 1v1's with a particular matchup
+        elif n == 2 and matchup is Matchup.ADVANTAGEOUS:
+            pokemon_species = [random.choice(self.all_pokemon)]
+            disadvantaged_pokemon = [pokemon for pokemon in self.all_pokemon
+                                     if self._types_advantage(pokemon_species[0], pokemon) is Matchup.ADVANTAGEOUS]
+            if not disadvantaged_pokemon:
+                disadvantaged_pokemon = [pokemon for pokemon in self.all_pokemon
+                                         if self._types_advantage(pokemon_species[0], pokemon) is Matchup.NEUTRAL]
+            pokemon_species.append(random.choice(disadvantaged_pokemon))
+        elif n == 2 and matchup is Matchup.DISADVANTAGEOUS:
+            pokemon_species = [random.choice(self.all_pokemon)]
+            advantaged_pokemon = [pokemon for pokemon in self.all_pokemon
+                                  if self._types_advantage(pokemon_species[0], pokemon) is Matchup.DISADVANTAGEOUS]
+            if not advantaged_pokemon:
+                advantaged_pokemon = [pokemon for pokemon in self.all_pokemon
+                                      if self._types_advantage(pokemon_species[0], pokemon) is Matchup.NEUTRAL]
+            pokemon_species.append(random.choice(advantaged_pokemon))
+
         generated_pokemon = [self._pokemon_from_species(species) for species in pokemon_species]
         return generated_pokemon

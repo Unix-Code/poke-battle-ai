@@ -21,6 +21,17 @@ class FullyRandomStrategy(BattleStrategy):
         return random.choice(curr_pokemon.move_set)
 
 
+class InteractiveBattleStrategy(BattleStrategy):
+    def pick_move(self, curr_pokemon: Pokemon, opposing_pokemon: Pokemon) -> Move:
+        print("Please select a move:")
+        for move_ind, move in enumerate(curr_pokemon.move_set):
+            print(f"{move_ind + 1}. {move.display_name}")
+        print()
+        print("> ", end="")
+        chosen_ind = int(input()) - 1
+        return curr_pokemon.move_set[chosen_ind]
+
+
 class ApproxQLearningStrategy(BattleStrategy):
     def __init__(self, gamma: float, alpha: float, epsilon: float):
         self.gamma = gamma

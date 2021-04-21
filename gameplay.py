@@ -310,8 +310,8 @@ class Battle:
             self.play_turn()
         self.print_battle_text(f"\n----- Battle Finished in {self.turn_count} turns. -----")
         if trainer_a.cannot_continue:
-            self.print_battle_text("Trainer B Wins!")
+            self.print_battle_text(f"{trainer_b.name} Wins!")
             return 1
         elif trainer_b.cannot_continue:
-            self.print_battle_text("Trainer A Wins!")
+            self.print_battle_text(f"{trainer_a.name} Wins!")
             return 0

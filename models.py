@@ -234,28 +234,24 @@ class Pokemon:
     def has_status(self, status: PokemonStatus) -> bool:
         return status in self.statuses
 
-    def get_status_damage(self, opponent_fainted: bool = False):
+    def get_status_damage(self, opponent_fainted: bool = False) -> tuple[int, str]:
         if self.has_status(PokemonStatus.BURNED):
-            print(f"{self.nickname} is hurt by its burn!")
-            return math.floor(self.stats.total_hp / 16)
+            return math.floor(self.stats.total_hp / 16), "is hurt by its burn!"
         if self.has_status(PokemonStatus.POISONED) and not opponent_fainted:
-            print(f"{self.nickname} is hurt by poison!")
-            return math.floor(self.stats.total_hp / 16)
+            return math.floor(self.stats.total_hp / 16), "is hurt by poison!"
         if self.has_status(PokemonStatus.BADLY_POISONED):
-            print(f"{self.nickname} is hurt by poison!")
             if self.dmg_multiplier == 1:
                 dmg = max(math.floor(self.stats.total_hp / 16), 1)
                 self.dmg_multiplier += 1
-                return dmg
+                return dmg, "is hurt by poison!"
             else:
                 dmg = self.dmg_multiplier * math.floor(self.stats.total_hp / 16)
                 if self.dmg_multiplier < 15:
                     self.dmg_multiplier += 1
-                    return dmg
+                    return dmg, "is hurt by poison!"
         if self.has_status(PokemonStatus.BOUND):
-            print(f"{self.nickname} is hurt by being bound!")
-            return math.floor(self.stats.total_hp / 16)
-        return 0
+            return math.floor(self.stats.total_hp / 16), "is hurt by being bound!"
+        return 0, ""
 
 
 @dataclass(frozen=True)

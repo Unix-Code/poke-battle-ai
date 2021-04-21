@@ -1,3 +1,4 @@
+import logging
 import math
 import random
 from typing import Optional
@@ -12,10 +13,19 @@ ATTACK_SELF = "attack_self"
 class Battle:
     LENGTH_MODIFIER = 2  # Effectively: Damage is divided by this with the intention of lengthening battles
 
-    def __init__(self, *trainers: Trainer):
+    def __init__(self, *trainers: Trainer, training_mode: bool = False):
         self.turn_count: int = 0
         self.trainers: tuple[Trainer, ...] = trainers
         self.move_queue: list[Optional[Move]] = [None, None]
+        self.training_mode = training_mode
+
+    @property
+    def finished(self) -> bool:
+        return any(trainer.cannot_continue for trainer in self.trainers)
+
+    def print_battle_text(self, *msgs: str):
+        if not self.training_mode:
+            print(*msgs)
 
     def _calc_move_order_sort(self, chosen_move: tuple[int, Move]) -> tuple[int, int, int]:
         trainer_ind, move = chosen_move
@@ -72,7 +82,9 @@ class Battle:
     def apply_move_rules(self, attacking_pokemon: Pokemon, move_used: Move, trainer_ind: int) -> bool:
         if move_used.info.hit_info.has_invulnerable_phase:
             if not attacking_pokemon.has_status(PokemonStatus.INVULNERABLE):
-                print(f"{attacking_pokemon.nickname} gains invulnerability for the turn")
+                self.print_battle_text(
+                    f"{attacking_pokemon.nickname} gains invulnerability for the turn"
+                )
                 attacking_pokemon.statuses.add(PokemonStatus.INVULNERABLE)
             else:
                 # Remove the status here since we can assume that each move that makes
@@ -81,7 +93,9 @@ class Battle:
 
         if move_used.info.hit_info.requires_charge:
             if not attacking_pokemon.has_status(PokemonStatus.CHARGING):
-                print(f"{attacking_pokemon.nickname} charges up {move_used.display_name}")
+                self.print_battle_text(
+                    f"{attacking_pokemon.nickname} charges up {move_used.display_name}"
+                )
                 attacking_pokemon.statuses.add(PokemonStatus.CHARGING)
                 self.move_queue[trainer_ind] = move_used
                 return True
@@ -95,7 +109,7 @@ class Battle:
 
         if move_used.info.hit_info.self_destructing:
             # Self Destruction occurs on hit or miss
-            print(f"{attacking_pokemon.nickname} self-destructed")
+            self.print_battle_text(f"{attacking_pokemon.nickname} self-destructed")
             attacking_pokemon.hp = 0
 
         return False
@@ -119,7 +133,7 @@ class Battle:
         if ailment == Ailment.BURN and (
             Type.FIRE not in defending_pokemon.species.types or move_used.info.type != Type.FIRE
         ):
-            print(f"{defending_pokemon.nickname} is burned by the attack!")
+            self.print_battle_text(f"{defending_pokemon.nickname} is burned by the attack!")
             defending_pokemon.statuses.add(PokemonStatus.BURNED)
             # TODO: Halve its Attack
         # Ground-type Pokemon cannot be paralyzed by an Electric-type move
@@ -127,25 +141,27 @@ class Battle:
             Type.GROUND not in defending_pokemon.species.types
             or move_used.info.type != Type.ELECTRIC
         ):
-            print(f"{defending_pokemon.nickname} is paralyzed by the attack!")
+            self.print_battle_text(f"{defending_pokemon.nickname} is paralyzed by the attack!")
             defending_pokemon.statuses.add(PokemonStatus.PARALYZED)
             # TODO: Decrease Speed by 75%
         # Poison-type Pokemon cannot be poisoned
         elif ailment == Ailment.POISON and Type.POISON not in defending_pokemon.species.types:
             if move_used.info.api_id == 92:
                 # The "Toxic" move was used
-                print(f"{defending_pokemon.nickname} is badly poisoned by the attack!")
+                self.print_battle_text(
+                    f"{defending_pokemon.nickname} is badly poisoned by the attack!"
+                )
                 defending_pokemon.statuses.add(PokemonStatus.BADLY_POISONED)
             else:
-                print(f"{defending_pokemon.nickname} is poisoned by the attack!")
+                self.print_battle_text(f"{defending_pokemon.nickname} is poisoned by the attack!")
                 defending_pokemon.statuses.add(PokemonStatus.POISONED)
         elif ailment == Ailment.CONFUSION:
-            print(f"{defending_pokemon.nickname} is confused by the attack!")
+            self.print_battle_text(f"{defending_pokemon.nickname} is confused by the attack!")
             defending_pokemon.statuses.add(PokemonStatus.CONFUSED)
             defending_pokemon.confusion_turns = random.randint(1, 5)
         # Pokemon can only be bound by one binding move at a time
         elif ailment == Ailment.TRAP and PokemonStatus.BOUND not in defending_pokemon.statuses:
-            print(f"{defending_pokemon.nickname} is trapped by the attack!")
+            self.print_battle_text(f"{defending_pokemon.nickname} is trapped by the attack!")
             defending_pokemon.statuses.add(PokemonStatus.BOUND)
             defending_pokemon.bound_turns = random.choices(
                 [2, 3, 4, 5], [0.375, 0.375, 0.125, 0.125]
@@ -156,37 +172,51 @@ class Battle:
         # Decrements pp or end up struggling
         move_used = move_to_use.use()
 
+        skip_move = False
+
         if attacking_pokemon.has_status(PokemonStatus.PARALYZED) and random.random() < 0.25:
-            print(f"{attacking_pokemon.nickname} is fully paralyzed! It can't move!")
-            return
+            self.print_battle_text(
+                f"{attacking_pokemon.nickname} is fully paralyzed! It can't move!"
+            )
+            # Clean up move states if the move was skipped due to paralysis
+            skip_move = True
+
+        if attacking_pokemon.has_status(PokemonStatus.BOUND):
+            if attacking_pokemon.bound_turns == 0:
+                self.print_battle_text(
+                    f"{attacking_pokemon.nickname} broke free! It is no longer trapped!"
+                )
+                attacking_pokemon.statuses.remove(PokemonStatus.BOUND)
+            else:
+                self.print_battle_text(f"{attacking_pokemon.nickname} is trapped! It can't move!")
+                status_dmg, status_msg = attacking_pokemon.get_status_damage()
+                attacking_pokemon.apply_health_effect(-status_dmg // self.LENGTH_MODIFIER)
+                if status_msg:
+                    self.print_battle_text(f"{attacking_pokemon.nickname} {status_msg}")
+                attacking_pokemon.bound_turns -= 1
+                skip_move = True
 
         if attacking_pokemon.has_status(PokemonStatus.CONFUSED):
             attacking_pokemon.confusion_turns -= 1
             if attacking_pokemon.confusion_turns == 0:
-                print(f"{attacking_pokemon.nickname} snapped out of its confusion!")
+                self.print_battle_text(
+                    f"{attacking_pokemon.nickname} snapped out of its confusion!"
+                )
                 attacking_pokemon.statuses.remove(PokemonStatus.CONFUSED)
             elif random.random() < 0.5:
                 # The Pokemon will attack itself
                 # These variables are changed so the damage can still be calculated the same way
-                move_to_use = Move.attack_self()
+                move_used = Move.attack_self()
                 defending_pokemon = attacking_pokemon
 
-        if attacking_pokemon.has_status(PokemonStatus.BOUND):
-            if attacking_pokemon.bound_turns == 0:
-                print(f"{attacking_pokemon.nickname} broke free! It is no longer trapped!")
-                attacking_pokemon.statuses.remove(PokemonStatus.BOUND)
-            else:
-                print(f"{attacking_pokemon.nickname} is trapped! It can't move!")
-                attacking_pokemon.apply_health_effect(-attacking_pokemon.get_status_damage())
-                attacking_pokemon.bound_turns -= 1
-                return
-
-        skip_move = self.apply_move_rules(attacking_pokemon, move_used, trainer_ind)
+        skip_move = self.apply_move_rules(attacking_pokemon, move_used, trainer_ind) or skip_move
         if skip_move:
             return
 
         if not self.is_hit(attacking_pokemon, defending_pokemon, move_to_use.info):
-            print(f"{attacking_pokemon.nickname}'s move ({move_used.display_name}) missed!")
+            self.print_battle_text(
+                f"{attacking_pokemon.nickname}'s move ({move_used.display_name}) missed!"
+            )
             return
 
         # Calculate damage of each hit (Gen 1: only 1st can crit and none are accuracy-dependent)
@@ -195,25 +225,33 @@ class Battle:
             raw_dmg = self.calc_dmg(attacking_pokemon, defending_pokemon, move_used.info)
             dmg_dealt = max(1, raw_dmg)
             hit_damages.append(dmg_dealt)
-        total_dmg_dealt = sum(hit_damages) // self.LENGTH_MODIFIER
+        total_dmg_dealt = sum(hit_damages)
 
         attacker_health_delta = math.floor(move_used.info.drain * total_dmg_dealt)
         recoil = attacker_health_delta < 0
         # Apply damage from status ailments
-        attacker_health_delta -= attacking_pokemon.get_status_damage(
+        status_dmg, status_msg = attacking_pokemon.get_status_damage(
             total_dmg_dealt > defending_pokemon.hp
         )
+        attacker_health_delta -= status_dmg
+        if status_msg:
+            self.print_battle_text(f"{attacking_pokemon.nickname} {status_msg}")
 
         if move_used.info.name == ATTACK_SELF:
-            print(f"{attacking_pokemon.nickname} is confused! It hurt itself in its confusion!")
-            attacking_pokemon.apply_health_effect(attacker_health_delta)
-            return
+            self.print_battle_text(
+                f"{attacking_pokemon.nickname} is confused! It hurt itself in its confusion!"
+            )
 
-        print(f"{attacking_pokemon.nickname} dealt {total_dmg_dealt} damage{' in total' if len(hit_damages) > 1 else ''}.")
+        self.print_battle_text(
+            f"{attacking_pokemon.nickname} dealt {total_dmg_dealt // self.LENGTH_MODIFIER} damage"
+            f"{' in total' if len(hit_damages) > 1 else ''}."
+        )
         if attacker_health_delta > 0:
-            print(f"{attacking_pokemon.nickname} healed itself for {attacker_health_delta}")
+            self.print_battle_text(
+                f"{attacking_pokemon.nickname} healed itself for {attacker_health_delta // self.LENGTH_MODIFIER}"
+            )
         elif attacker_health_delta < 0 and recoil:
-            print(f"{attacking_pokemon.nickname} was hit with {attacker_health_delta} recoil damage")
+            self.print_battle_text(f"{attacking_pokemon.nickname} was hit with {attacker_health_delta // self.LENGTH_MODIFIER} recoil damage")
 
         if move_used.info.ailment:
             if random.random() < move_used.info.ailment_chance:
@@ -221,8 +259,8 @@ class Battle:
 
         defender_health_delta = -total_dmg_dealt
         # Adjust health bars after using move
-        attacking_pokemon.apply_health_effect(attacker_health_delta)
-        defending_pokemon.apply_health_effect(defender_health_delta)
+        attacking_pokemon.apply_health_effect(attacker_health_delta // self.LENGTH_MODIFIER)
+        defending_pokemon.apply_health_effect(defender_health_delta // self.LENGTH_MODIFIER)
 
     def choose_moves(self) -> list[tuple[int, Move]]:
         chosen_moves = []
@@ -233,38 +271,47 @@ class Battle:
                 self.move_queue[trainer_ind] = None
             elif trainer.pokemon.has_status(PokemonStatus.RECHARGING):
                 chosen_move = None
-                print(f"{trainer.name}'s {trainer.pokemon.nickname} must recharge")
+                self.print_battle_text(f"{trainer.name}'s {trainer.pokemon.nickname} must recharge")
                 trainer.pokemon.statuses.remove(PokemonStatus.RECHARGING)
             else:
-                chosen_move = trainer.pick_move(self.trainers[(trainer_ind + 1) % len(self.trainers)].pokemon)
+                chosen_move = trainer.pick_move(
+                    self.trainers[(trainer_ind + 1) % len(self.trainers)].pokemon
+                )
             if chosen_move is not None:
                 chosen_moves.append((trainer_ind, chosen_move))
         return chosen_moves
 
     def play_turn(self):
+        if self.turn_count > 100:
+            logging.error("THIS GAME IS GOING ON FOR WAY TOO LONG")
         self.turn_count += 1
         chosen_moves = self.choose_moves()
         for trainer_ind, move_to_use in sorted(chosen_moves, key=self._calc_move_order_sort, reverse=True):
             attacking_trainer = self.trainers[trainer_ind]
             defending_trainer = self.trainers[(trainer_ind + 1) % len(self.trainers)]
-            if attacking_trainer.cannot_continue or defending_trainer.cannot_continue:
+            if self.finished:
                 # If a pokemon faints in the middle of a turn, end the match
                 break
-            print(f"{attacking_trainer.name}'s {attacking_trainer.pokemon.nickname} tried to use: {move_to_use.display_name}")
+            self.print_battle_text(f"{attacking_trainer.name}'s {attacking_trainer.pokemon.nickname} tried to use: {move_to_use.display_name}")
             self.use_move(attacking_trainer.pokemon, defending_trainer.pokemon, move_to_use, trainer_ind)
 
-    def run(self):
+    def run(self) -> int:
         self.turn_count = 0
         trainer_a, trainer_b = self.trainers
-        print(f"{trainer_a.name} with {trainer_a.pokemon.nickname} ({trainer_a.pokemon.species.display_name})", "VS",
-              f"{trainer_b.name} with {trainer_b.pokemon.nickname} ({trainer_b.pokemon.species.display_name})")
-        while not trainer_a.cannot_continue and not trainer_b.cannot_continue:
-            print(f"----- Turn {self.turn_count} -----")
-            print(f"{trainer_a.pokemon.nickname}: {trainer_a.pokemon.hp}/{trainer_a.pokemon.stats.total_hp}")
-            print(f"{trainer_b.pokemon.nickname}: {trainer_b.pokemon.hp}/{trainer_b.pokemon.stats.total_hp}\n")
+        self.print_battle_text(
+            f"{trainer_a.name} with {trainer_a.pokemon.nickname} ({trainer_a.pokemon.species.display_name})", "VS",
+            f"{trainer_b.name} with {trainer_b.pokemon.nickname} ({trainer_b.pokemon.species.display_name})")
+        while not self.finished:
+            self.print_battle_text(f"----- Turn {self.turn_count} -----")
+            self.print_battle_text(
+                f"{trainer_a.pokemon.nickname}: {trainer_a.pokemon.hp}/{trainer_a.pokemon.stats.total_hp}")
+            self.print_battle_text(
+                f"{trainer_b.pokemon.nickname}: {trainer_b.pokemon.hp}/{trainer_b.pokemon.stats.total_hp}\n")
             self.play_turn()
-        print(f"\n----- Battle Finished in {self.turn_count} turns. -----")
+        self.print_battle_text(f"\n----- Battle Finished in {self.turn_count} turns. -----")
         if trainer_a.cannot_continue:
-            print("Trainer B Wins!")
+            self.print_battle_text("Trainer B Wins!")
+            return 1
         elif trainer_b.cannot_continue:
-            print("Trainer A Wins!")
+            self.print_battle_text("Trainer A Wins!")
+            return 0

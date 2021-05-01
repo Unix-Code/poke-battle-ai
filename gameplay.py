@@ -172,7 +172,10 @@ class Battle:
         # Decrements pp or end up struggling
         move_used = move_to_use.use()
 
-        skip_move = False
+        skip_move = self.apply_move_rules(attacking_pokemon, move_used, trainer_ind)
+        if skip_move:
+            move_used.pp += 1  # Don't decrement pp if skipped due to charging
+            return
 
         if attacking_pokemon.has_status(PokemonStatus.PARALYZED) and random.random() < 0.25:
             self.print_battle_text(
@@ -209,7 +212,6 @@ class Battle:
                 move_used = Move.attack_self()
                 defending_pokemon = attacking_pokemon
 
-        skip_move = self.apply_move_rules(attacking_pokemon, move_used, trainer_ind) or skip_move
         if skip_move:
             return
 
@@ -268,6 +270,8 @@ class Battle:
         for trainer_ind, trainer in enumerate(self.trainers):
             if trainer.pokemon.has_status(PokemonStatus.CHARGING):
                 chosen_move = self.move_queue[trainer_ind]
+                if chosen_move is None:
+                    logging.error("Charging move could not find charged move on following turn")
                 self.move_queue[trainer_ind] = None
             elif trainer.pokemon.has_status(PokemonStatus.RECHARGING):
                 chosen_move = None

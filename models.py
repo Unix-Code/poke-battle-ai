@@ -51,12 +51,13 @@ class Type(Enum):
 
     @classmethod
     def dmg_modifier(cls, attacking_type: 'Type', defending_type: 'Type') -> float:
-        with open("./data/dmg_map.json", "r") as f:
-            data = json.load(f)
-        dmg_map = {Type(k.upper()): {m: [Type(t.upper()) for t in t_list]
-                                     for m, t_list in v.items()}
-                   for k, v in data.items()}
-        type_dmg_map = dmg_map[attacking_type]
+        if not hasattr(cls, "_dmg_map"):
+            with open("./data/dmg_map.json", "r") as f:
+                data = json.load(f)
+            cls._dmg_map = {Type(k.upper()): {m: [Type(t.upper()) for t in t_list]
+                                              for m, t_list in v.items()}
+                            for k, v in data.items()}
+        type_dmg_map = cls._dmg_map[attacking_type]
         if defending_type in type_dmg_map["double_damage_to"]:
             return 2
         elif defending_type in type_dmg_map["half_damage_to"]:
